@@ -1,0 +1,418 @@
+---
+title: "Supplementary materials"
+author: "Anna Łukasik"
+date: "26 06 2022"
+output: html_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Batch effect correction - Supplementary materials
+### Anna Łukasik
+
+The file below is part of the 'Batch effects correction' project and contains R code. The interpretation is included in the above mentioned file.
+
+```{r}
+library(data.table)
+library(sva)
+library(ggplot2)
+library(edgeR)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+```
+
+Data loading function. The data was taken from the authors of the reference publication GitHub.
+
+```{r}
+ReadDataTable <- function(filename){
+  tempdata = read.table(filename, row.names=1, header=T, sep="\t", strip.white=T)
+  s_names = names(tempdata)
+  n = length(s_names)
+  x = rownames(tempdata)
+  if(s_names[1] == 'Entrez_Gene_Id' | s_names[1] == 'Description')
+  {
+    tempdata = tempdata[order(x), 2:n]
+  }else{
+    tempdata = tempdata[order(x), ]
+  }
+  tempdata <- tempdata[rowMeans(tempdata) > 10, ]
+  tempdata <- log2(as.matrix(tempdata) + 1)
+  tempdata <- as.data.frame(tempdata) %>% select_if(~ !any(is.na(.)))
+  return(tempdata)
+}
+```
+
+Data downloaded from a folder called by authors 'unnormalized' (https://github.com/mskcc/RNAseqDB/tree/master/data/unnormalized).
+
+```{r}
+# thyroid
+thyroid_gtex <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\thyroid\\thyroid-rsem-fpkm-gtex.txt")
+thyroid_tcga <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\thyroid\\thca-rsem-fpkm-tcga.txt")
+thyroid_tcga_t <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\thyroid\\thca-rsem-fpkm-tcga-t.txt")
+
+
+# breast
+breast_gtex <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\breast\\breast-rsem-fpkm-gtex.txt")
+breast_tcga <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\breast\\brca-rsem-fpkm-tcga.txt")
+breast_tcga_t <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\breast\\brca-rsem-fpkm-tcga-t.txt")
+
+# bladder
+bladder_gtex <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\bladder\\bladder-rsem-fpkm-gtex.txt")
+bladder_tcga <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\bladder\\blca-rsem-fpkm-tcga.txt")
+bladder_tcga_t <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\unnormalized\\bladder\\blca-rsem-fpkm-tcga-t.txt")
+
+```
+
+Data downloaded from a folder called by authors 'normalized' (https://github.com/mskcc/RNAseqDB/tree/master/data/normalized).
+
+```{r}
+# thyroid
+norm_thyroid_gtex <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\thyroid\\thyroid-rsem-fpkm-gtex.txt")
+norm_thyroid_tcga <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\thyroid\\thca-rsem-fpkm-tcga.txt")
+norm_thyroid_tcga_t <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\thyroid\\thca-rsem-fpkm-tcga-t.txt")
+
+# breast
+norm_breast_gtex <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\breast\\breast-rsem-fpkm-gtex.txt")
+norm_breast_tcga <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\breast\\brca-rsem-fpkm-tcga.txt")
+norm_breast_tcga_t <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\breast\\brca-rsem-fpkm-tcga-t.txt")
+
+# bladder
+norm_bladder_gtex <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\bladder\\bladder-rsem-fpkm-gtex.txt")
+norm_bladder_tcga <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\bladder\\blca-rsem-fpkm-tcga.txt")
+norm_bladder_tcga_t <- ReadDataTable("C:\\Users\\LaptopHP\\Desktop\\Magisterka_Bioinformatyka\\sem 4\\Modelowanie złożonych systemów biologicznych\\Project\\Code\\data\\normalized\\bladder\\blca-rsem-fpkm-tcga-t.txt")
+
+```
+
+Reducing the dimension to make calculations more efficient.
+
+```{r}
+n=10
+
+thyroid_g <- thyroid_gtex %>% select(1:n)
+thyroid_t <- thyroid_tcga %>% select(1:n)
+thyroid_tt <- thyroid_tcga_t %>% select(1:n)
+
+breast_g <- breast_gtex %>% select(1:n)
+breast_t <- breast_tcga %>% select(1:n)
+breast_tt <- breast_tcga_t %>% select(1:n)
+
+bladder_g <- bladder_gtex %>% select(1:n)
+bladder_t <- bladder_tcga %>% select(1:n)
+bladder_tt <- bladder_tcga_t %>% select(1:n)
+
+norm_thyroid_g <- norm_thyroid_gtex %>% select(1:n)
+norm_thyroid_t <- norm_thyroid_tcga %>% select(1:n)
+norm_thyroid_tt <- norm_thyroid_tcga_t %>% select(1:n)
+
+norm_breast_g <- norm_breast_gtex %>% select(1:n)
+norm_breast_t <- norm_breast_tcga %>% select(1:n)
+norm_breast_tt <- norm_breast_tcga_t %>% select(1:n)
+
+norm_bladder_g <- norm_bladder_gtex %>% select(1:n)
+norm_bladder_t <- norm_bladder_tcga %>% select(1:n)
+norm_bladder_tt <- norm_bladder_tcga_t %>% select(1:n)
+```
+
+Selecting only genes common to all sets.
+
+```{r}
+rows <- Reduce(intersect, list(rownames(thyroid_g),
+                       rownames(thyroid_t),
+                       rownames(thyroid_tt),
+                       rownames(breast_g),
+                       rownames(breast_t),
+                       rownames(breast_tt),
+                       rownames(bladder_g),
+                       rownames(bladder_t),
+                       rownames(bladder_tt)))
+
+
+thyroid_g <- thyroid_g[rows,]
+thyroid_t <- thyroid_t[rows,]
+thyroid_tt <- thyroid_tt[rows,]
+
+breast_g <- breast_g[rows,]
+breast_t <- breast_t[rows,]
+breast_tt <- breast_tt[rows,]
+
+bladder_g <- bladder_g[rows,]
+bladder_t <- bladder_t[rows,]
+bladder_tt <- bladder_tt[rows,]
+
+norm_thyroid_g <- norm_thyroid_g[rows,]
+norm_thyroid_t <- norm_thyroid_t[rows,]
+norm_thyroid_tt <- norm_thyroid_tt[rows,]
+
+norm_breast_g <- norm_breast_g[rows,]
+norm_breast_t <- norm_breast_t[rows,]
+norm_breast_tt <- norm_breast_tt[rows,]
+
+norm_bladder_g <- norm_bladder_g[rows,]
+norm_bladder_t <- norm_bladder_t[rows,]
+norm_bladder_tt <- norm_bladder_tt[rows,]
+```
+
+Checking if the data is normalized.
+
+```{r}
+gene_exp_log2_plot <- function(df1,df2,df3,t1,t2,t3, t) {
+  df <- cbind(df1,df2,df3)
+  colnames(df) <- c(1:ncol(df))
+  df_new <- pivot_longer(df, colnames(df), names_to = "var",values_to = "values")
+  df_new$var <- as.factor(df_new$var)
+  df_new$legend <-  c( rep( ( c(c(rep(t1,10)), c(rep(t2,10)), c(rep(t3,10))) ),nrow(df)))
+
+  ggplot(df_new, aes(var, values, fill=legend)) + 
+    geom_boxplot() +
+    labs(x = "Samples", y= "Gene expression (log2)",  title = t)
+  ggsave(paste(t, ".png", sep = ""))
+  # dev.off()
+}
+```
+
+Creating charts for each tissue from data from 2 folders: normalized and unnormalized.
+
+```{r}
+gene_exp_log2_plot(thyroid_g, thyroid_t, thyroid_tt, "GTEx","TCGA normal","TCGA tumor", "Thyroid ('unnormalized' directory)")
+gene_exp_log2_plot(norm_thyroid_g, norm_thyroid_t, norm_thyroid_tt, "GTEx","TCGA normal","TCGA tumor", "Thyroid ('normalized' directory)")
+
+gene_exp_log2_plot(breast_g, breast_t, breast_tt, "GTEx","TCGA normal","TCGA tumor", "Breast ('unnormalized' directory)")
+gene_exp_log2_plot(norm_breast_g, norm_breast_t, norm_breast_tt, "GTEx","TCGA normal","TCGA tumor", "Breast ('normalized' directory)")
+
+gene_exp_log2_plot(bladder_g, bladder_t, bladder_tt, "GTEx","TCGA normal","TCGA tumor", "Bladder ('unnormalized' directory)")
+gene_exp_log2_plot(norm_bladder_g, norm_bladder_t, norm_bladder_tt, "GTEx","TCGA normal","TCGA tumor", "Bladder ('normalized' directory)")
+```
+
+Data frames needed to remove batch effects.
+
+```{r}
+dfs = list(thyroid_g,
+           thyroid_t,
+           thyroid_tt,
+           breast_g,
+           breast_t,
+           breast_tt,
+           bladder_g,
+           bladder_t,
+           bladder_tt)
+
+get.names <- function(x){
+  names <- NaN
+  for(d in x) {
+    names <- c(names, colnames(d))
+  }
+  names = names[-1]
+  return(names)
+}
+
+names <- get.names(dfs)
+
+mydata = cbind(thyroid_g,
+           thyroid_t,
+           thyroid_tt,
+           breast_g,
+           breast_t,
+           breast_tt,
+           bladder_g,
+           bladder_t,
+           bladder_tt)
+
+
+count.cancer <- function(x){
+  counter <- NaN
+  for(df in x){
+    counter <- c(counter, ncol(df))}
+  counter = counter[-1]
+  return(counter)
+  
+}
+ca <- count.cancer(dfs)
+
+description <- data.frame(
+  sample = 1:ncol(mydata),
+  tissue= rep(c("thyroid GTEx", "thyroid TCGA", "thyroid TCGA", 
+                "breast GTEx", "breast TCGA", "breast TCGA", 
+                "bladder GTEx", "bladder TCGA", "bladder TCGA"), ca),
+  cancer = rep(c("normal", "normal", "tumor", "normal", "normal", "tumor", "normal", "normal", "tumor"), ca),
+  batch = rep(c("1", "2", "2", "1", "2", "2", "1", "2", "2"), ca),
+  row.names = names)
+```
+
+PCA before batch effects correction.
+
+```{r}
+svd.out <- svd(mydata[1:1700,])
+
+PC = data.table(svd.out$v,description)
+
+library(ggforce)
+ggplot(PC, aes(V1, V2)) +
+  geom_point(aes(x=V1, y=V2, col=as.factor(tissue))) +
+  geom_mark_ellipse(aes(fill = as.factor(tissue)))+
+  labs(title = "Before batch effect correction")+
+  theme(legend.position="top")
+ggsave("Before_correction_ellipses.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(tissue)))+
+  labs(title = "Before batch effect correction")+
+  theme(legend.position="top")
+ggsave("Before_correction_tissue.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(cancer)))+
+  labs(title = "Before batch effect correction")+
+  theme(legend.position="top")
+ggsave("Before_correction_cancer.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(batch)))+
+  labs(title = "Before batch effect correction")+
+  theme(legend.position="top")
+ggsave("Before_correction_batch.png")
+dev.off()
+```
+
+Batch effects correction by ComBat. PCA once again.
+
+```{r}
+combat_mydata = ComBat(dat=mydata, batch=description$batch, mod=model.matrix(~1, data=description), par.prior=TRUE, prior.plots=TRUE)
+
+svd.out <- svd(combat_mydata[1:1700,])
+PC = data.table(svd.out$v,description)
+
+ggplot(PC, aes(V1, V2)) +
+  geom_point(aes(x=V1, y=V2, col=as.factor(tissue))) +
+  geom_mark_ellipse(aes(fill = as.factor(tissue)))+
+  labs(title = "After batch effect correction")+
+  theme(legend.position="top")
+
+ggsave("After_correction_ellipses.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(tissue)))+
+  labs(title = "After batch effect correction")+
+  theme(legend.position="top")
+ggsave("After_correction_tissue.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(cancer)))+
+  labs(title = "After batch effect correction")+
+  theme(legend.position="top")
+ggsave("After_correction_cancer.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(batch)))+
+  labs(title = "After batch effect correction")+
+  theme(legend.position="top")
+ggsave("After_correction_batch.png")
+dev.off()
+```
+
+PCA for data from 'normalized' folder.
+
+```{r}
+norm_dfs <- list(norm_thyroid_g,
+                norm_thyroid_t,
+                norm_thyroid_tt,
+                norm_breast_g,
+                norm_breast_t,
+                norm_breast_tt,
+                norm_bladder_g,
+                norm_bladder_t,
+                norm_bladder_tt)
+
+norm_names <- get.names(norm_dfs)
+
+norm_mydata <- cbind(norm_thyroid_g,
+                    norm_thyroid_t,
+                    norm_thyroid_tt,
+                    norm_breast_g,
+                    norm_breast_t,
+                    norm_breast_tt,
+                    norm_bladder_g,
+                    norm_bladder_t,
+                    norm_bladder_tt)
+
+norm_ca <- count.cancer(norm_dfs)
+
+norm_description <- data.frame(
+  sample = 1:ncol(norm_mydata),
+  tissue= rep(c("thyroid GTEx", "thyroid TCGA", "thyroid TCGA", 
+                "breast GTEx", "breast TCGA", "breast TCGA", 
+                "bladder GTEx", "bladder TCGA", "bladder TCGA"), norm_ca),
+  cancer = rep(c("normal", "normal", "tumor", "normal", "normal", "tumor", "normal", "normal", "tumor"), norm_ca),
+  batch = rep(c("1", "2", "2", "1", "2", "2", "1", "2", "2"), norm_ca),
+  row.names = norm_names)
+
+svd.out <- svd(norm_mydata[1:1700,])
+
+norm_PC = data.table(svd.out$v,description)
+
+ggplot(norm_PC, aes(V1, V2)) +
+  geom_point(aes(x=V1, y=V2, col=as.factor(tissue))) +
+  geom_mark_ellipse(aes(fill = as.factor(tissue)))+
+  labs(title = "Authors batch effect correction")+
+  theme(legend.position="top")
+ggsave("Authors_correction_ellipses.png")
+dev.off()
+
+ggplot(norm_PC) + geom_point(aes(x=V1, y=V2, col=as.factor(tissue)))+
+  labs(title = "Authors batch effect correction")+
+  theme(legend.position="top")
+ggsave("Authors_correction_tissue.png")
+dev.off()
+
+ggplot(norm_PC) + geom_point(aes(x=V1, y=V2, col=as.factor(cancer)))+
+  labs(title = "Authors batch effect correction")+
+  theme(legend.position="top")
+ggsave("Authors_correction_cancer.png")
+dev.off()
+
+ggplot(norm_PC) + geom_point(aes(x=V1, y=V2, col=as.factor(batch)))+
+  labs(title = "Authors batch effect correction")+
+  theme(legend.position="top")
+ggsave("Authors_correction_batch.png")
+dev.off()
+```
+
+Batch effects correction by limma and PCA.
+
+```{r}
+library(limma)
+
+limma_mydata <- removeBatchEffect(mydata, batch = description$batch, 
+                                    design = model.matrix(~1, data=description), par.prior=TRUE, prior.plots=TRUE)
+
+svd.out <- svd(limma_mydata)
+PC = data.table(svd.out$v,description)
+
+ggplot(PC, aes(V1, V2)) +
+  geom_point(aes(x=V1, y=V2, col=as.factor(tissue))) +
+  geom_mark_ellipse(aes(fill = as.factor(tissue)))+
+  labs(title = "After batch effect correction (limma)")+
+  theme(legend.position="top")
+
+ggsave("After_correction_ellipses.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(tissue)))+
+  labs(title = "After batch effect correction (limma)")+
+  theme(legend.position="top")
+ggsave("After_correction_tissue.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(cancer)))+
+  labs(title = "After batch effect correction (limma)")+
+  theme(legend.position="top")
+ggsave("After_correction_cancer.png")
+dev.off()
+
+ggplot(PC) + geom_point(aes(x=V1, y=V2, col=as.factor(batch)))+
+  labs(title = "After batch effect correction (limma)")+
+  theme(legend.position="top")
+ggsave("After_correction_batch.png")
+dev.off()
+```
